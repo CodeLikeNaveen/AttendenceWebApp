@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import home, dashboard, leave
-from app.database import db, Baseinit_db
+from app.database import db, Base, init_db
 from app.database import init_db
 
 # ─── App Instance ─────────────────────────────────────────────────────────────
