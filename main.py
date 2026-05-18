@@ -8,7 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import home, dashboard, leave
-from app.database import engine, Base, init_db
+from app.database import db, Baseinit_db
+from app.database import init_db
 
 # ─── App Instance ─────────────────────────────────────────────────────────────
 
@@ -48,6 +49,6 @@ async def on_startup():
     """
     init_db()
 
-    async with engine.begin() as conn:
+    async with db.begin() as conn:
         import app.models  # noqa
         await conn.run_sync(Base.metadata.create_all)
