@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ employee.emp_name }} — Attendance Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📅</text></svg>">
+</head>
+<body>
+
+<!-- ── Top Bar ─────────────────────────────────────────────────── -->
+<nav class="topbar">
+  <div class="topbar-brand">
+    <span class="logo-dot"></span>
+    Attendance Portal
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-emp">{{ employee.emp_name }}</span>
+    <a href="/" class="btn-logout">← Change User</a>
+  </div>
+</nav>
+
+<!-- ── Page Wrapper ─────────────────────────────────────────────── -->
+<div class="page-wrap">
+
+  <!-- Employee Info Header -->
+  <div class="dash-header">
+    <div class="dash-emp-info">
+      <h2>{{ employee.emp_name }}</h2>
+      <div class="badge-row">
+        <span class="badge">{{ employee.emp_code }}</span>
+        {% if employee.branch_rel %}
+        <span class="badge badge-soft">{{ employee.branch_rel.branch_name }}</span>
+        {% endif %}
+        {% if employee.designation %}
+        <span class="badge badge-soft">{{ employee.designation }}</span>
+        {% endif %}
+        {% if employee.department %}
+        <span class="badge badge-soft">{{ employee.department }}</span>
+        {% endif %}
+        <span class="badge badge-green">{{ employee.status }}</span>
+      </div>
+    </div>
+
+    <!-- Apply Leave Button -->
+    <button class="btn-accent" id="applyLeaveBtn">
+      ✏ Apply Leave
+    </button>
+  </div>
+
+  <!-- ── Summary Cards ─────────────────────────────────────────── -->
+  <div class="summary-grid">
+
+    <div class="summary-card c-late">
+      <div class="s-label">Total Late</div>
+      <div class="s-value">{{ summary.total_late }}</div>
+      <div class="s-sub">this month</div>
+    </div>
+
+    <div class="summary-card c-leave">
+      <div class="s-label">Leave Taken</div>
+      <div class="s-value">{{ summary.leave_taken_month }}</div>
+      <div class="s-sub">this month</div>
+    </div>
+
+    <div class="summary-card c-shift">
+      <div class="s-label">Shift Time</div>
+      <div class="s-value" style="font-size:1rem; margin-top:8px;">
+        {{ summary.shift_info or "—" }}
+      </div>
+      <div class="s-sub">assigned shift</div>
+    </div>
+
+    <div class="summary-card c-present">
+      <div class="s-label">Total Present</div>
+      <div class="s-value">{{ summary.total_present_month }}</div>
+      <div class="s-sub">of {{ summary.working_days_month }} working days</div>
+    </div>
+
+    <div class="summary-card c-absent">
+      <div class="s-label">Total Absent</div>
+      <div class="s-value">{{ summary.total_absent_month }}</div>
+      <div class="s-sub">this month</div>
+    </div>
+
+  </div>
+
+  <!-- ── Attendance Calendar ───────────────────────────────────── -->
+  <div class="section-card">
+
+    <!-- Month navigation -->
+    <div class="cal-nav">
+      <div class="cal-nav-title">
+        📅 {{ month_name }} {{ sel_year }}
+      </div>
+      <div class="cal-nav-btns">
+        <a
+          href="/dashboard/{{ employee.emp_code }}?month={{ prev_month }}&year={{ prev_year }}"
+          class="btn-nav"
+          aria-label="Previous month"
+        >← Prev</a>
+        <a
+          href="/dashboard/{{ employee.emp_code }}"
+          class="btn-nav"
+        >Today</a>
+        <a
+          href="/dashboard/{{ employee.emp_code }}?month={{ next_month }}&year={{ next_year }}"
+          class="btn-nav"
+          aria-label="Next month"
+        >Next →</a>
+      </div>
+    </div>
+
+    <!-- Weekday headers -->
+    <div class="cal-weekdays">
+      <div class="cal-weekday">Mon</div>
+      <div class="cal-weekday">Tue</div>
+      <div class="cal-weekday">Wed</div>
+      <div class="cal-weekday">Thu</div>
+      <div class="cal-weekday">Fri</div>
+      <div class="cal-weekday">Sat</div>
+      <div class="cal-weekday">Sun</div>
+    </div>
+
+    <!-- Calendar cells rendered by JS -->
+    <div class="cal-grid" id="calGrid" role="grid" aria-label="Attendance calendar"></div>
+
+    <!-- Legend -->
+    <div class="legend" aria-label="Colour legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-full)"></div> Full Day (1)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-three-q)"></div> ¾ Day (0.75)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-half)"></div> Half Day (0.5)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-quarter)"></div> ¼ Day (0.25)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-absent)"></div> Absent (0)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-penalty)"></div> Penalty (−0.25)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-leave)"></div> On Leave</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-holiday)"></div> Holiday</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--c-sunday)"></div> Sunday</div>
+    </div>
+
+  </div>
+
+  <!-- ── Special Events ────────────────────────────────────────── -->
+  <div class="section-card">
+    <div class="section-title">
+      <div class="icon">🎉</div>
+      Today's Special Events
+    </div>
+
+    {% if special_events %}
+    <div class="events-grid">
+      {% for ev in special_events %}
+      <div class="event-card {% if ev.event_type == 'anniversary' %}anniversary{% endif %}">
+        <div class="event-emoji">
+          {% if ev.event_type == 'birthday' %}🎂{% else %}🏅{% endif %}
+        </div>
+        <div class="event-info">
+          <div class="name">{{ ev.emp_name }}</div>
+          <div class="sub">
+            {% if ev.event_type == 'birthday' %}
+              🎂 Birthday — Turning {{ ev.years }}
+            {% else %}
+              🏅 Work Anniversary — {{ ev.years }} year{% if ev.years != 1 %}s{% endif %}
+            {% endif %}
+          </div>
+          <div class="sub">
+            {% if ev.designation %}{{ ev.designation }}{% endif %}
+            {% if ev.branch_name %} · {{ ev.branch_name }}{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-events">No birthdays or work anniversaries today.</p>
+    {% endif %}
+
+  </div>
+
+</div><!-- /page-wrap -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DAY DETAIL MODAL
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="dayModal" role="dialog" aria-modal="true" aria-labelledby="modalDateTitle">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      <span class="modal-title" id="modalDateTitle">Date Detail</span>
+      <button class="modal-close" id="closeDayModal" aria-label="Close">✕</button>
+    </div>
+
+    <div id="modalBadge" class="modal-badge">Status</div>
+
+    <div class="detail-row">
+      <div class="detail-item">
+        <div class="d-label">In Time</div>
+        <div class="d-value" id="modalInTime">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="d-label">Out Time</div>
+        <div class="d-value" id="modalOutTime">—</div>
+      </div>
+    </div>
+
+    <div class="detail-row">
+      <div class="detail-item">
+        <div class="d-label">Worked Hours</div>
+        <div class="d-value" id="modalWorked">—</div>
+      </div>
+      <div class="detail-item">
+        <div class="d-label">Late By</div>
+        <div class="d-value" id="modalLateBy">—</div>
+      </div>
+    </div>
+
+    <div class="detail-row">
+      <div class="detail-item">
+        <div class="d-label">Early By</div>
+        <div class="d-value" id="modalEarlyBy">—</div>
+      </div>
+    </div>
+
+    <div id="modalComment" class="detail-comment" style="display:none;"></div>
+    <div id="modalLeaveInfo" class="detail-comment" style="display:none; background:#ede9fe; border-color:#c4b5fd; color:#5b21b6;"></div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LEAVE APPLICATION MODAL
+═════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="leaveModal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      <span class="modal-title" id="leaveModalTitle">✏ Apply for Leave</span>
+      <button class="modal-close" id="closeLeaveModal" aria-label="Close">✕</button>
+    </div>
+
+    <form method="POST" action="/leave/apply" class="leave-form">
+
+      <!-- Hidden employee code -->
+      <input type="hidden" name="emp_code" value="{{ employee.emp_code }}">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="from_date">From Date</label>
+          <input type="date" id="from_date" name="from_date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="to_date">To Date</label>
+          <input type="date" id="to_date" name="to_date" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="leave_type_id">Leave Type</label>
+        <select id="leave_type_id" name="leave_type_id" class="form-control" required>
+          <option value="">— Select Leave Type —</option>
+          {% for lt in leave_types %}
+          <option value="{{ lt.id }}">{{ lt.leave_type_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="reason">Reason (optional)</label>
+        <textarea
+          id="reason"
+          name="reason"
+          class="form-control"
+          rows="3"
+          placeholder="Brief description of reason..."
+          style="resize:vertical;"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="btn-primary">Submit Leave Application</button>
+
+    </form>
+
+  </div>
+</div>
+
+
+<!-- ─── Inject calendar data for JS ────────────────────────────── -->
+<script>
+  window.__CAL_DATA__ = {
+    days: {{ calendar_days | tojson }},
+    firstWeekday: {{ first_weekday }},
+    today: "{{ today }}",
+    empCode: "{{ employee.emp_code }}"
+  };
+</script>
+<script src="/static/calendar.js"></script>
+
+</body>
+</html>
